@@ -17,3 +17,4 @@ Su objetivo principal es aplicar las técnicas y herramientas vistas en clase pa
 
 ## 👨‍💻 Alumno
 - Nazareno Napoli
+- Ariadna Zambiazzo
