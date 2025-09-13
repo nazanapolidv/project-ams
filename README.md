@@ -15,6 +15,6 @@ Su objetivo principal es aplicar las técnicas y herramientas vistas en clase pa
 - **Diagramas**: Casos de uso, Diagramas de clases, Diagramas de secuencia, Diagramas de actividad, etc.
 - **Metodología aplicada**: Scrum
 
-## 👨‍💻 Alumno
+## 👨‍💻 Alumnos
 - Nazareno Napoli
 - Ariadna Zambiazzo
