@@ -6,12 +6,20 @@ class Deposito :
         self.contenedores = []
         self.pedidos = []
 
-    def adicionar_item(self, item):
-        self._items.append(item)
+    def agregar_contenedor(self, contenedor):
+        if len(self.contenedores) < self.capacidad_contenedores:
+            self.contenedores.append(contenedor)
+        else:
+            raise ValueError("Capacidad máxima de contenedores alcanzada")
 
-    def remover_item(self, item):
-        if item in self._items:
-            self._items.remove(item)
+    def listar_contenedores(self):
+        return self.contenedores
 
-    def listar_items(self):
-        return self._items
+    def agregar_pedido(self, pedido):
+        self.pedidos.append(pedido)
+
+    def listar_pedidos(self):
+        return self.pedidos
+
+    def __str__(self):
+        return f"Depósito {self.nombre} (ID {self.id_deposito}) con {len(self.contenedores)} contenedores y {len(self.pedidos)} pedidos"
