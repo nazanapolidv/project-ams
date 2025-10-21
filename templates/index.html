@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clientes</title>
+</head>
+<body>
+    <h1>Registro de clientes</h1>
+    <form action="/" method="post">
+        <label for="nombre">Nombre:</label>
+        <input type="text" id="nombre" name="nombre" required>
+        <br>
+        <label for="apellido">Apellido:</label>
+        <input type="text" id="apellido" name="apellido" required>
+        <br>
+        <label for="dni">DNI:</label>
+        <input type="text" id="dni" name="dni">
+        <br>
+        <button type="submit">Guardar</button>
+    </form>
+
+    <h2>Clientes existentes</h2>
+    <ul>
+        {% for cliente in clientes %}
+            <li>{{ cliente[0] }} {{ cliente[1] }} - {{ cliente[2] }}</li>
+        {% else %}
+            <li>No hay clientes cargados.</li>
+        {% endfor %}
+    </ul>
+</body>
+</html>
