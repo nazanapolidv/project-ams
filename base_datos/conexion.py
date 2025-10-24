@@ -31,6 +31,25 @@ class Conexion:
   def eliminar_cliente(self, dni):
     self.cursor.execute("DELETE FROM cliente WHERE dni=?", (dni, ))
     self.conexion.commit()
+
+  def crear_tabla_deposito(self):
+        self.cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS deposito (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                nombre TEXT NOT NULL,
+                cantidad_contenedores INTEGER NOT NULL
+            )
+            """
+        )
+        self.conexion.commit()
+
+  def agregar_deposito(self, nombre, cantidad_contenedores):
+      self.cursor.execute(
+          "INSERT INTO deposito (nombre, cantidad_contenedores) VALUES (?, ?)",
+          (nombre, cantidad_contenedores)
+      )
+      self.conexion.commit()
   
   def cerrar_conexion(self):
     self.cursor.close()

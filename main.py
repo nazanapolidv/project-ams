@@ -1,23 +1,33 @@
+from flask import Flask, request, render_template, redirect, url_for
 from base_datos.conexion import Conexion
-from flask import Flask, request, render_template
-
-# def main() -> None:
-# 	db = Conexion("clientes.db")
-# 	db.crear_tabla_cliente()
-# 	db.agregar_cliente("Juan", "Perez", "12345678")
-# 	db.agregar_cliente("Maria", "Gomez", "87654321")
-# 	print(db.mostrar_clientes())
-# 	db.cerrar_conexion()
-
 
 app = Flask(__name__)
 
-@app.route('/', methods=['GET', 'POST'])
+
+@app.route('/')
 def index():
-	if request.method == 'POST':
-     nombre = request.form['nombre']
-     apellido = request.form['apellido']
-     return render_template('resultado.html', nombre=nombre, apellido=apellido)
     return render_template('index.html')
- 
- 
+
+
+@app.route('/deposito-principal', methods=['POST'])
+def manejar_deposito():
+    try:
+        nombre_deposito = request.form['nombre']
+        cantidad = request.form['contenedores']
+
+        print("---------------------------------")
+        print(
+            f"Datos recibidos del form: Nombre={nombre_deposito}, Cantidad={cantidad}")
+        print("---------------------------------")
+
+        db = Conexion("bd.db")
+        db.agregar_deposito(nombre_deposito, cantidad)
+        db.cerrar_conexion()
+    except Exception as e:
+        print(f"Error al agregar depósito: {e}")
+
+    return redirect(url_for('index'))
+
+
+if __name__ == '__main__':
+    app.run(debug=True)

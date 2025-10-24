@@ -1,10 +1,12 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cliente guardado</title>
 </head>
+
 <body>
     <h1>Cliente registrado</h1>
     <p>Se agregó {{ nombre }} {{ apellido }}.</p>
@@ -12,12 +14,13 @@
     <h2>Listado actualizado</h2>
     <ul>
         {% for cliente in clientes %}
-            <li>{{ cliente[0] }} {{ cliente[1] }} - {{ cliente[2] }}</li>
+        <li>{{ cliente[0] }} {{ cliente[1] }} - {{ cliente[2] }}</li>
         {% else %}
-            <li>No hay clientes cargados.</li>
+        <li>No hay clientes cargados.</li>
         {% endfor %}
     </ul>
 
-    <p><a href="/">Volver</a></p>
+    <p><a href="/index.html">Volver</a></p>
 </body>
+
 </html>
