@@ -228,6 +228,83 @@ def setup_database():
             db.session.add(cliente_ana)
             print("  -> Cliente 'Ana Gomez' creado.")
 
+        deposito_principal = Deposito.query.filter_by(
+            nombre="Depósito Central").first()
+        if not deposito_principal:
+            deposito_principal = Deposito(
+                nombre="Depósito Central",
+                capacidad_contenedores=100
+            )
+            db.session.add(deposito_principal)
+            print("  -> Depósito 'Depósito Central' creado.")
+            try:
+                db.session.flush()
+            except Exception as e:
+                db.session.rollback()
+                print(f"Error al hacer flush de depósito: {e}")
+                return
+
+        contenedor_a1 = Contenedor.query.filter_by(id_contenedor=1).first()
+        if not contenedor_a1:
+            contenedor_a1 = Contenedor(
+                capacidad=76,
+                ocupacion_actual=0,
+                estado='disponible',
+                id_deposito=deposito_principal.id_deposito
+            )
+            db.session.add(contenedor_a1)
+            print("  -> Contenedor 'A1' creado.")
+
+        contenedor_a2 = Contenedor.query.filter_by(id_contenedor=2).first()
+        if not contenedor_a2:
+            contenedor_a2 = Contenedor(
+                capacidad=78,
+                ocupacion_actual=0,
+                estado='mantenimiento',
+                id_deposito=deposito_principal.id_deposito
+            )
+            db.session.add(contenedor_a2)
+            print("  -> Contenedor 'A2' creado.")
+
+        productos_a_crear = [
+            {'sku': 'SKU001', 'nombre': 'Notebook Gamer',
+                'precio': 1500.00, 'peso': 2.5},
+            {'sku': 'SKU002', 'nombre': 'Monitor LED 24"',
+                'precio': 250.00, 'peso': 3.0},
+            {'sku': 'SKU003', 'nombre': 'Teclado Mecánico RGB',
+                'precio': 120.00, 'peso': 1.1},
+            {'sku': 'SKU004', 'nombre': 'Mouse Inalámbrico',
+                'precio': 45.00, 'peso': 0.2},
+            {'sku': 'SKU005', 'nombre': 'Auriculares Bluetooth',
+                'precio': 80.00, 'peso': 0.3},
+            {'sku': 'SKU006', 'nombre': 'Silla de Oficina Ergonómica',
+                'precio': 300.00, 'peso': 15.0},
+            {'sku': 'SKU007', 'nombre': 'Impresora Multifunción',
+                'precio': 180.00, 'peso': 8.5},
+            {'sku': 'SKU008', 'nombre': 'Disco SSD 1TB',
+                'precio': 100.00, 'peso': 0.1},
+            {'sku': 'SKU009', 'nombre': 'Router WiFi 6',
+                'precio': 90.00, 'peso': 0.7},
+            {'sku': 'SKU010', 'nombre': 'Webcam Full HD',
+                'precio': 60.00, 'peso': 0.2}
+        ]
+
+        for prod_data in productos_a_crear:
+            producto = Producto.query.filter_by(sku=prod_data['sku']).first()
+            if not producto:
+                producto = Producto(
+                    sku=prod_data['sku'],
+                    nombre=prod_data['nombre'],
+                    precio_unitario=prod_data['precio'],
+                    peso=prod_data['peso'],
+                    descripcion=f"Descripción de {prod_data['nombre']}",
+                    alto=10,
+                    ancho=10,
+                    profundidad=10
+                )
+                db.session.add(producto)
+                print(f"  -> Producto '{prod_data['nombre']}' creado.")
+
         try:
             db.session.commit()
             print("Setup creado")
