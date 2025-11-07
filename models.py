@@ -2,6 +2,7 @@ import os
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from dotenv import load_dotenv
+from datetime import date
 
 load_dotenv()
 
@@ -171,12 +172,10 @@ db.init_app(app)
 
 
 def setup_database():
-    print("Conectando a la base de datos...")
     with app.app_context():
         # db.drop_all()
         db.create_all()
-        print("¡Tablas creadas exitosamente!")
-        print("Sembrando datos iniciales (usuarios y clientes)...")
+        print("Tablas creadas")
 
         gerente_user = Usuario.query.filter_by(
             email="gerente@barcco.com").first()
@@ -289,6 +288,8 @@ def setup_database():
                 'precio': 60.00, 'peso': 0.2}
         ]
 
+        productos_db = {}
+
         for prod_data in productos_a_crear:
             producto = Producto.query.filter_by(sku=prod_data['sku']).first()
             if not producto:
@@ -304,6 +305,116 @@ def setup_database():
                 )
                 db.session.add(producto)
                 print(f"  -> Producto '{prod_data['nombre']}' creado.")
+
+            productos_db[producto.sku] = producto
+
+        pedido_1 = Pedido.query.filter_by(id_pedido=1).first()
+        if not pedido_1:
+            precio_note = productos_db['SKU001'].precio_unitario
+            precio_mouse = productos_db['SKU004'].precio_unitario
+            total_pedido_1 = (precio_note * 1) + (precio_mouse * 2)
+
+            pedido_1 = Pedido(
+                id_pedido=1,
+                fecha=date(2025, 5, 1),
+                estado='entregado',
+                total=total_pedido_1,
+                id_cliente=cliente_juan.id_cliente,
+                id_usuario=gerente_user.id_usuario,
+                id_deposito=deposito_principal.id_deposito
+            )
+            db.session.add(pedido_1)
+            item_p1_1 = ItemPedido(
+                pedido=pedido_1, producto=productos_db['SKU001'], cantidad=1, precio=precio_note)
+            item_p1_2 = ItemPedido(
+                pedido=pedido_1, producto=productos_db['SKU004'], cantidad=2, precio=precio_mouse)
+            db.session.add_all([item_p1_1, item_p1_2])
+            print("  -> Pedido 1 (Juan) creado.")
+
+        pedido_2 = Pedido.query.filter_by(id_pedido=2).first()
+        if not pedido_2:
+            precio_monitor = productos_db['SKU002'].precio_unitario
+            total_pedido_2 = precio_monitor * 2
+
+            pedido_2 = Pedido(
+                id_pedido=2,
+                fecha=date(2025, 5, 3),
+                estado='en_proceso',
+                total=total_pedido_2,
+                id_cliente=cliente_ana.id_cliente,
+                id_usuario=cliente_user.id_usuario,
+                id_deposito=deposito_principal.id_deposito
+            )
+            db.session.add(pedido_2)
+            item_p2_1 = ItemPedido(
+                pedido=pedido_2, producto=productos_db['SKU002'], cantidad=2, precio=precio_monitor)
+            db.session.add(item_p2_1)
+            print("  -> Pedido 2 (Ana) creado.")
+
+        pedido_3 = Pedido.query.filter_by(id_pedido=3).first()
+        if not pedido_3:
+            precio_teclado = productos_db['SKU003'].precio_unitario
+            precio_mouse = productos_db['SKU004'].precio_unitario
+            precio_auri = 80.00
+            total_pedido_3 = (precio_teclado * 1) + \
+                (precio_mouse * 1) + (precio_auri * 1)
+
+            pedido_3 = Pedido(
+                id_pedido=3,
+                fecha=date(2025, 5, 5),
+                estado='pendiente',
+                total=total_pedido_3,
+                id_cliente=cliente_ana.id_cliente,
+                id_usuario=gerente_user.id_usuario,
+                id_deposito=deposito_principal.id_deposito
+            )
+            db.session.add(pedido_3)
+            item_p3_1 = ItemPedido(
+                pedido=pedido_3, producto=productos_db['SKU003'], cantidad=1, precio=precio_teclado)
+            item_p3_2 = ItemPedido(
+                pedido=pedido_3, producto=productos_db['SKU004'], cantidad=1, precio=precio_mouse)
+            db.session.add_all([item_p3_1, item_p3_2])
+            print("  -> Pedido 3 (Ana) creado.")
+
+        pedido_4 = Pedido.query.filter_by(id_pedido=4).first()
+        if not pedido_4:
+            precio_note = productos_db['SKU001'].precio_unitario
+            total_pedido_4 = precio_note * 1
+
+            pedido_4 = Pedido(
+                id_pedido=4,
+                fecha=date(2025, 5, 10),
+                estado='pendiente',
+                total=total_pedido_4,
+                id_cliente=cliente_juan.id_cliente,
+                id_usuario=cliente_user.id_usuario,
+                id_deposito=deposito_principal.id_deposito
+            )
+            db.session.add(pedido_4)
+            item_p4_1 = ItemPedido(
+                pedido=pedido_4, producto=productos_db['SKU001'], cantidad=1, precio=precio_note)
+            db.session.add(item_p4_1)
+            print("  -> Pedido 4 (Juan) creado.")
+
+        pedido_5 = Pedido.query.filter_by(id_pedido=5).first()
+        if not pedido_5:
+            precio_teclado = productos_db['SKU003'].precio_unitario
+            total_pedido_5 = precio_teclado * 3
+
+            pedido_5 = Pedido(
+                id_pedido=5,
+                fecha=date(2025, 5, 11),
+                estado='cancelado',
+                total=total_pedido_5,
+                id_cliente=cliente_juan.id_cliente,
+                id_usuario=gerente_user.id_usuario,
+                id_deposito=deposito_principal.id_deposito
+            )
+            db.session.add(pedido_5)
+            item_p5_1 = ItemPedido(
+                pedido=pedido_5, producto=productos_db['SKU003'], cantidad=3, precio=precio_teclado)
+            db.session.add(item_p5_1)
+            print("  -> Pedido 5 (Juan) creado.")
 
         try:
             db.session.commit()

@@ -1,6 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, session, g
 from dotenv import load_dotenv
-from models import db, Usuario
+from models import db, Usuario, Pedido, Producto, Contenedor
 import os
 
 load_dotenv()
@@ -71,8 +71,11 @@ def gerente():
     if not g.user or g.user.rol.lower() != 'gerente':
         flash('Debes iniciar sesión como gerente para ver esta página.', 'warning')
         return redirect(url_for('login'))
+    
+    todos_los_pedidos = Pedido.query.order_by(Pedido.fecha.desc()).all()
+    contenedores = Contenedor.query.all()
 
-    return render_template('gerente.html', usuario=g.user)
+    return render_template('gerente.html', usuario=g.user, pedidos=todos_los_pedidos, contenedores=contenedores)
 
 
 @app.route('/logout')
