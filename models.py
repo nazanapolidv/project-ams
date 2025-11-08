@@ -3,6 +3,8 @@ from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from dotenv import load_dotenv
 from datetime import date
+from sqlalchemy import Computed, event, func
+from decimal import Decimal
 
 load_dotenv()
 
@@ -45,6 +47,8 @@ class Producto(db.Model):
     alto = db.Column(db.DECIMAL(10, 2))
     ancho = db.Column(db.DECIMAL(10, 2))
     profundidad = db.Column(db.DECIMAL(10, 2))
+    volumen = db.Column(db.DECIMAL(10, 2), Computed(
+        'alto * ancho * profundidad', persisted=True))
     peso = db.Column(db.DECIMAL(10, 2))
     precio_unitario = db.Column(db.DECIMAL(10, 2))
 
@@ -65,12 +69,14 @@ class Deposito(db.Model):
 class Contenedor(db.Model):
     __tablename__ = 'contenedor'
     id_contenedor = db.Column(db.Integer, primary_key=True)
-    capacidad = db.Column(db.Integer)
-    ocupacion_actual = db.Column(db.Integer, default=0)
+    capacidad = db.Column(db.DECIMAL(10, 6), default=0.0)
+    ocupacion_actual = db.Column(db.DECIMAL(10, 6), default=0.0)
     estado = db.Column(db.String(20))
 
     id_deposito = db.Column(db.Integer, db.ForeignKey(
         'deposito.id_deposito'), nullable=False)
+
+    pedidos = db.relationship('Pedido', backref='contenedor', lazy=True)
 
 
 class Pedido(db.Model):
@@ -78,8 +84,11 @@ class Pedido(db.Model):
     id_pedido = db.Column(db.Integer, primary_key=True)
     fecha = db.Column(db.DATE, nullable=False)
     estado = db.Column(db.String(20), default='pendiente')
-    total = db.Column(db.DECIMAL(10, 2), nullable=False)
-
+    total = db.Column(db.DECIMAL(10, 2), nullable=False, default=0.0)
+    volumen_total_m3 = db.Column(db.DECIMAL(
+        10, 6), nullable=False, default=0.0)
+    id_contenedor = db.Column(db.Integer, db.ForeignKey(
+        'contenedor.id_contenedor'), nullable=True)
     id_cliente = db.Column(db.Integer, db.ForeignKey(
         'cliente.id_cliente'), nullable=False)
     id_usuario = db.Column(db.Integer, db.ForeignKey(
@@ -161,7 +170,7 @@ db_name = os.environ.get('MYSQL_DB')
 
 if not all([user, host, db_name]):
     raise ValueError(
-        "Faltan variables (MYSQL_USER, MYSQL_HOST, MYSQL_DB) en el archivo .env")
+        "Faltan variables en el archivo .env")
 
 db_uri = f"mysql+pymysql://{user}:{password}@{host}/{db_name}"
 
@@ -173,7 +182,7 @@ db.init_app(app)
 
 def setup_database():
     with app.app_context():
-        # db.drop_all()
+        db.drop_all()
         db.create_all()
         print("Tablas creadas")
 
@@ -310,109 +319,92 @@ def setup_database():
 
         pedido_1 = Pedido.query.filter_by(id_pedido=1).first()
         if not pedido_1:
-            precio_note = productos_db['SKU001'].precio_unitario
-            precio_mouse = productos_db['SKU004'].precio_unitario
-            total_pedido_1 = (precio_note * 1) + (precio_mouse * 2)
-
             pedido_1 = Pedido(
                 id_pedido=1,
                 fecha=date(2025, 5, 1),
                 estado='entregado',
-                total=total_pedido_1,
                 id_cliente=cliente_juan.id_cliente,
                 id_usuario=gerente_user.id_usuario,
                 id_deposito=deposito_principal.id_deposito
             )
             db.session.add(pedido_1)
             item_p1_1 = ItemPedido(
-                pedido=pedido_1, producto=productos_db['SKU001'], cantidad=1, precio=precio_note)
+                pedido=pedido_1, producto=productos_db['SKU001'], cantidad=1,
+                precio=productos_db['SKU001'].precio_unitario)
             item_p1_2 = ItemPedido(
-                pedido=pedido_1, producto=productos_db['SKU004'], cantidad=2, precio=precio_mouse)
+                pedido=pedido_1, producto=productos_db['SKU004'], cantidad=2,
+                precio=productos_db['SKU004'].precio_unitario)
             db.session.add_all([item_p1_1, item_p1_2])
             print("  -> Pedido 1 (Juan) creado.")
 
         pedido_2 = Pedido.query.filter_by(id_pedido=2).first()
         if not pedido_2:
-            precio_monitor = productos_db['SKU002'].precio_unitario
-            total_pedido_2 = precio_monitor * 2
-
             pedido_2 = Pedido(
                 id_pedido=2,
                 fecha=date(2025, 5, 3),
-                estado='en_proceso',
-                total=total_pedido_2,
+                estado='aprobado',
                 id_cliente=cliente_ana.id_cliente,
                 id_usuario=cliente_user.id_usuario,
                 id_deposito=deposito_principal.id_deposito
             )
             db.session.add(pedido_2)
             item_p2_1 = ItemPedido(
-                pedido=pedido_2, producto=productos_db['SKU002'], cantidad=2, precio=precio_monitor)
+                pedido=pedido_2, producto=productos_db['SKU002'], cantidad=2,
+                precio=productos_db['SKU002'].precio_unitario)
             db.session.add(item_p2_1)
             print("  -> Pedido 2 (Ana) creado.")
 
         pedido_3 = Pedido.query.filter_by(id_pedido=3).first()
         if not pedido_3:
-            precio_teclado = productos_db['SKU003'].precio_unitario
-            precio_mouse = productos_db['SKU004'].precio_unitario
-            precio_auri = 80.00
-            total_pedido_3 = (precio_teclado * 1) + \
-                (precio_mouse * 1) + (precio_auri * 1)
-
             pedido_3 = Pedido(
                 id_pedido=3,
                 fecha=date(2025, 5, 5),
                 estado='pendiente',
-                total=total_pedido_3,
                 id_cliente=cliente_ana.id_cliente,
                 id_usuario=gerente_user.id_usuario,
                 id_deposito=deposito_principal.id_deposito
             )
             db.session.add(pedido_3)
             item_p3_1 = ItemPedido(
-                pedido=pedido_3, producto=productos_db['SKU003'], cantidad=1, precio=precio_teclado)
+                pedido=pedido_3, producto=productos_db['SKU003'], cantidad=1,
+                precio=productos_db['SKU003'].precio_unitario)
             item_p3_2 = ItemPedido(
-                pedido=pedido_3, producto=productos_db['SKU004'], cantidad=1, precio=precio_mouse)
+                pedido=pedido_3, producto=productos_db['SKU004'], cantidad=1,
+                precio=productos_db['SKU004'].precio_unitario)
             db.session.add_all([item_p3_1, item_p3_2])
             print("  -> Pedido 3 (Ana) creado.")
 
         pedido_4 = Pedido.query.filter_by(id_pedido=4).first()
         if not pedido_4:
-            precio_note = productos_db['SKU001'].precio_unitario
-            total_pedido_4 = precio_note * 1
-
             pedido_4 = Pedido(
                 id_pedido=4,
                 fecha=date(2025, 5, 10),
                 estado='pendiente',
-                total=total_pedido_4,
                 id_cliente=cliente_juan.id_cliente,
                 id_usuario=cliente_user.id_usuario,
                 id_deposito=deposito_principal.id_deposito
             )
             db.session.add(pedido_4)
             item_p4_1 = ItemPedido(
-                pedido=pedido_4, producto=productos_db['SKU001'], cantidad=1, precio=precio_note)
+                pedido=pedido_4, producto=productos_db['SKU001'], cantidad=1,
+                precio=productos_db['SKU001'].precio_unitario)
             db.session.add(item_p4_1)
             print("  -> Pedido 4 (Juan) creado.")
 
         pedido_5 = Pedido.query.filter_by(id_pedido=5).first()
         if not pedido_5:
-            precio_teclado = productos_db['SKU003'].precio_unitario
-            total_pedido_5 = precio_teclado * 3
-
             pedido_5 = Pedido(
                 id_pedido=5,
                 fecha=date(2025, 5, 11),
                 estado='cancelado',
-                total=total_pedido_5,
                 id_cliente=cliente_juan.id_cliente,
                 id_usuario=gerente_user.id_usuario,
                 id_deposito=deposito_principal.id_deposito
             )
             db.session.add(pedido_5)
             item_p5_1 = ItemPedido(
-                pedido=pedido_5, producto=productos_db['SKU003'], cantidad=3, precio=precio_teclado)
+                pedido=pedido_5, producto=productos_db['SKU003'], cantidad=3,
+                precio=productos_db['SKU003'].precio_unitario)
             db.session.add(item_p5_1)
             print("  -> Pedido 5 (Juan) creado.")
 
@@ -422,6 +414,58 @@ def setup_database():
         except Exception as e:
             db.session.rollback()
             print(f"Error al guardar setup: {e}")
+
+
+def actualizar_totales_pedido(session, pedido_id):
+    """
+    Función helper para recalcular el TOTAL (precio) y 
+    el VOLUMEN (m³) de un pedido y actualizarlo en la base de datos.
+    """
+    if pedido_id is None:
+        return
+
+    resultados = session.query(
+        func.sum(ItemPedido.precio * ItemPedido.cantidad),
+        func.sum(Producto.volumen * ItemPedido.cantidad)
+    ).join(
+        Producto, ItemPedido.sku == Producto.sku
+    ).filter(
+        ItemPedido.id_pedido == pedido_id
+    ).one()
+
+    nuevo_total_precio = resultados[0]
+    nuevo_total_volumen_cm3 = resultados[1]
+
+    if nuevo_total_volumen_cm3 is not None:
+        nuevo_total_m3 = nuevo_total_volumen_cm3 / Decimal('1000000.0')
+    else:
+        nuevo_total_m3 = Decimal('0.0')
+
+    session.query(Pedido).filter(Pedido.id_pedido == pedido_id).update(
+        {
+            'total': nuevo_total_precio or Decimal('0.0'),
+            'volumen_total_m3': nuevo_total_m3
+        },
+        synchronize_session=False
+    )
+
+
+@event.listens_for(ItemPedido, 'after_insert')
+def on_item_insert(mapper, connection, target):
+    """Se dispara después de que se inserta un nuevo ItemPedido."""
+    actualizar_totales_pedido(db.session, target.id_pedido)
+
+
+@event.listens_for(ItemPedido, 'after_update')
+def on_item_update(mapper, connection, target):
+    """Se dispara después de que se actualiza un ItemPedido."""
+    actualizar_totales_pedido(db.session, target.id_pedido)
+
+
+@event.listens_for(ItemPedido, 'after_delete')
+def on_item_delete(mapper, connection, target):
+    """Se dispara después de que se borra un ItemPedido."""
+    actualizar_totales_pedido(db.session, target.id_pedido)
 
 
 if __name__ == '__main__':

@@ -14,16 +14,17 @@ db_name = os.getenv("MYSQL_DB")
 
 app.config['SQLALCHEMY_DATABASE_URI'] = f"mysql+pymysql://{user}:{password}@{host}/{db_name}"
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SECRET_KEY'] = 'clave_secreta_muy_dificil' 
+app.config['SECRET_KEY'] = 'clave_secreta_muy_dificil'
 
 db.init_app(app)
+
 
 @app.before_request
 def load_logged_in_user():
     user_id = session.get('user_id')
 
     if user_id is None:
-        g.user = None 
+        g.user = None
     else:
         g.user = Usuario.query.get(user_id)
 
@@ -40,7 +41,8 @@ def login():
         email = request.form['email']
         contraseña = request.form['contraseña']
 
-        usuario = Usuario.query.filter_by(email=email, contraseña=contraseña).first()
+        usuario = Usuario.query.filter_by(
+            email=email, contraseña=contraseña).first()
 
         if usuario:
             session.clear()
@@ -71,11 +73,73 @@ def gerente():
     if not g.user or g.user.rol.lower() != 'gerente':
         flash('Debes iniciar sesión como gerente para ver esta página.', 'warning')
         return redirect(url_for('login'))
-    
+
     todos_los_pedidos = Pedido.query.order_by(Pedido.fecha.desc()).all()
     contenedores = Contenedor.query.all()
 
     return render_template('gerente.html', usuario=g.user, pedidos=todos_los_pedidos, contenedores=contenedores)
+
+
+@app.route('/aprobar_pedido/<int:pedido_id>', methods=['POST'])
+def aprobar_pedido(pedido_id):
+    if not g.user or g.user.rol.lower() != 'gerente':
+        flash('Acción no autorizada.', 'danger')
+        return redirect(url_for('login'))
+
+    pedido = Pedido.query.get(pedido_id)
+    if not pedido:
+        flash('Pedido no encontrado.', 'danger')
+        return redirect(url_for('gerente'))
+
+    if pedido.estado != 'pendiente':
+        flash(
+            f'El pedido #{pedido.id_pedido} ya no estaba pendiente.', 'warning')
+        return redirect(url_for('gerente'))
+
+    # Buscar un contenedor con capacidad suficiente
+    contenedor_disponible = Contenedor.query.filter(
+        Contenedor.estado == 'disponible',
+        Contenedor.capacidad - Contenedor.ocupacion_actual >= pedido.volumen_total_m3
+    ).order_by(Contenedor.capacidad - Contenedor.ocupacion_actual).first()
+
+    if contenedor_disponible:
+        pedido.estado = 'aprobado'
+        pedido.id_contenedor = contenedor_disponible.id_contenedor
+        contenedor_disponible.ocupacion_actual += pedido.volumen_total_m3
+
+        # Opcional: Si el contenedor se llena, cambiar su estado
+        if contenedor_disponible.ocupacion_actual >= contenedor_disponible.capacidad:
+            contenedor_disponible.estado = 'ocupado'
+
+        db.session.commit()
+        flash(
+            f'Pedido #{pedido.id_pedido} aprobado y asignado al contenedor #{contenedor_disponible.id_contenedor}.', 'success')
+    else:
+        flash(
+            f'No hay contenedores disponibles con capacidad suficiente para el pedido #{pedido.id_pedido}.', 'danger')
+
+    return redirect(url_for('gerente'))
+
+
+@app.route('/rechazar_pedido/<int:pedido_id>', methods=['POST'])
+def rechazar_pedido(pedido_id):
+    if not g.user or g.user.rol.lower() != 'gerente':
+        flash('Acción no autorizada.', 'danger')
+        return redirect(url_for('login'))
+
+    pedido = Pedido.query.get(pedido_id)
+    if pedido:
+        if pedido.estado == 'pendiente':
+            pedido.estado = 'cancelado'
+            db.session.commit()
+            flash(f'Pedido #{pedido.id_pedido} ha sido cancelado.', 'danger')
+        else:
+            flash(
+                f'El pedido #{pedido.id_pedido} ya no estaba pendiente.', 'warning')
+    else:
+        flash('Pedido no encontrado.', 'danger')
+
+    return redirect(url_for('gerente'))
 
 
 @app.route('/logout')

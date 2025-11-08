@@ -21,6 +21,8 @@
             <th scope="col">Cliente</th>
             <th scope="col">Fecha</th>
             <th scope="col">Total</th>
+            <th scope="col">Volumen (m³)</th>
+            <th scope="col">Contenedor</th>
             <th scope="col">Observaciones</th>
             <th scope="col">Estado</th>
           </tr>
@@ -32,14 +34,33 @@
             <td class="text-secondary">{{ pedido.cliente.nombre }}</td>
             <td class="">{{ pedido.fecha.strftime('%Y-%m-%d') }}</td>
             <td class="text-success fw-bold">${{ '%.2f'|format(pedido.total) }}</td>
+            <td>{{ '%.6f'|format(pedido.volumen_total_m3) }}</td>
+            <td>{{ pedido.id_contenedor if pedido.id_contenedor else 'N/A' }}</td>
             <td class="text-secondary">
               <textarea name="observaciones_{{ pedido.id_pedido }}" id="observaciones_{{ pedido.id_pedido }}"
                 class="form-control no-resize" rows="1"></textarea>
             </td>
             <td class="text-secondary">
               <div>
-                <button class="btn btn-success btn-sm">Aprobar</button>
-                <button class="btn btn-danger btn-sm">Rechazar</button>
+                {% if pedido.estado == 'pendiente' %}
+
+                <form action="{{ url_for('aprobar_pedido', pedido_id=pedido.id_pedido) }}" method="POST"
+                  style="display: inline;">
+                  <button type="submit" class="btn btn-success btn-sm">Aprobar</button>
+                </form>
+
+                <form action="{{ url_for('rechazar_pedido', pedido_id=pedido.id_pedido) }}" method="POST"
+                  style="display: inline;">
+                  <button type="submit" class="btn btn-danger btn-sm">Rechazar</button>
+                </form>
+
+                {% elif pedido.estado == 'aprobado' %}
+                <span class="badge bg-success">Aprobado</span>
+                {% elif pedido.estado == 'cancelado' %}
+                <span class="badge bg-danger">Cancelado</span>
+                {% elif pedido.estado == 'entregado' %}
+                <span class="badge bg-light">Entregado</span>
+                {% endif %}
               </div>
             </td>
 
@@ -70,6 +91,7 @@
             <th>ID Contenedor</th>
             <th>Capacidad total (m³)</th>
             <th>Ocupación actual (m³)</th>
+            <th>Capacidad Disponible (m³)</th>
             <th>Estado</th>
           </tr>
         </thead>
@@ -77,8 +99,9 @@
           {% for contenedor in contenedores %}
           <tr class="">
             <td class="">{{ contenedor.id_contenedor }}</td>
-            <td class="">{{ contenedor.capacidad }}</td>
-            <td class="">{{ contenedor.capacidad }}</td>
+            <td class="">{{ '%.6f'|format(contenedor.capacidad) }}</td>
+            <td class="">{{ '%.6f'|format(contenedor.ocupacion_actual) }}</td>
+            <td class="">{{ '%.6f'|format(contenedor.capacidad - contenedor.ocupacion_actual) }}</td>
             <td class="">
               {% if contenedor.estado == "mantenimiento" %}
               <span class="badge bg-warning">En mantenimiento</span>
