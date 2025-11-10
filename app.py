@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, session, g
 from dotenv import load_dotenv
-from models import db, Usuario, Pedido, Producto, Contenedor
+from models import db, Usuario, Pedido, Producto, Contenedor, Revision, RegestionEnvios
+from datetime import date
 import os
 
 load_dotenv()
@@ -76,49 +77,9 @@ def gerente():
 
     todos_los_pedidos = Pedido.query.order_by(Pedido.fecha.desc()).all()
     contenedores = Contenedor.query.all()
+    todos_los_envios = RegestionEnvios.query.all()
 
-    return render_template('gerente.html', usuario=g.user, pedidos=todos_los_pedidos, contenedores=contenedores)
-
-
-@app.route('/aprobar_pedido/<int:pedido_id>', methods=['POST'])
-def aprobar_pedido(pedido_id):
-    if not g.user or g.user.rol.lower() != 'gerente':
-        flash('Acción no autorizada.', 'danger')
-        return redirect(url_for('login'))
-
-    pedido = Pedido.query.get(pedido_id)
-    if not pedido:
-        flash('Pedido no encontrado.', 'danger')
-        return redirect(url_for('gerente'))
-
-    if pedido.estado != 'pendiente':
-        flash(
-            f'El pedido #{pedido.id_pedido} ya no estaba pendiente.', 'warning')
-        return redirect(url_for('gerente'))
-
-    # Buscar un contenedor con capacidad suficiente
-    contenedor_disponible = Contenedor.query.filter(
-        Contenedor.estado == 'disponible',
-        Contenedor.capacidad - Contenedor.ocupacion_actual >= pedido.volumen_total_m3
-    ).order_by(Contenedor.capacidad - Contenedor.ocupacion_actual).first()
-
-    if contenedor_disponible:
-        pedido.estado = 'aprobado'
-        pedido.id_contenedor = contenedor_disponible.id_contenedor
-        contenedor_disponible.ocupacion_actual += pedido.volumen_total_m3
-
-        # Opcional: Si el contenedor se llena, cambiar su estado
-        if contenedor_disponible.ocupacion_actual >= contenedor_disponible.capacidad:
-            contenedor_disponible.estado = 'ocupado'
-
-        db.session.commit()
-        flash(
-            f'Pedido #{pedido.id_pedido} aprobado y asignado al contenedor #{contenedor_disponible.id_contenedor}.', 'success')
-    else:
-        flash(
-            f'No hay contenedores disponibles con capacidad suficiente para el pedido #{pedido.id_pedido}.', 'danger')
-
-    return redirect(url_for('gerente'))
+    return render_template('gerente.html', usuario=g.user, pedidos=todos_los_pedidos, contenedores=contenedores, regestionenvios=todos_los_envios)
 
 
 @app.route('/rechazar_pedido/<int:pedido_id>', methods=['POST'])
@@ -138,6 +99,66 @@ def rechazar_pedido(pedido_id):
                 f'El pedido #{pedido.id_pedido} ya no estaba pendiente.', 'warning')
     else:
         flash('Pedido no encontrado.', 'danger')
+
+    return redirect(url_for('gerente'))
+
+
+@app.route('/aprobar_pedido/<int:pedido_id>', methods=['POST'])
+def aprobar_pedido(pedido_id):
+    if not g.user or g.user.rol.lower() != 'gerente':
+        flash('Acción no autorizada.', 'danger')
+        return redirect(url_for('login'))
+
+    pedido = Pedido.query.get(pedido_id)
+    if not pedido:
+        flash('Pedido no encontrado.', 'danger')
+        return redirect(url_for('gerente'))
+
+    if pedido.estado != 'pendiente':
+        flash(
+            f'El pedido #{pedido.id_pedido} ya no estaba pendiente.', 'warning')
+        return redirect(url_for('gerente'))
+    volumen_pedido = getattr(pedido, 'volumen_total_m3', 0)
+    contenedor_disponible = Contenedor.query.filter(
+        Contenedor.estado == 'disponible',
+        Contenedor.capacidad - Contenedor.ocupacion_actual >= volumen_pedido
+    ).order_by(Contenedor.capacidad - Contenedor.ocupacion_actual).first()
+
+    if contenedor_disponible:
+        pedido.estado = 'aprobado'
+        pedido.id_contenedor = contenedor_disponible.id_contenedor
+
+        contenedor_disponible.ocupacion_actual += volumen_pedido
+        if contenedor_disponible.ocupacion_actual >= contenedor_disponible.capacidad:
+            contenedor_disponible.estado = 'ocupado'
+
+        nueva_revision = Revision(
+            fecha=date.today(),
+            resultado='aprobado',
+            observaciones='Aprobado por gerente y asignado a contenedor.',
+            id_pedido=pedido.id_pedido,
+            id_usuario=g.user.id_usuario
+        )
+        db.session.add(nueva_revision)
+
+        db.session.flush()
+
+        nuevo_envio = RegestionEnvios(
+            fecha=date.today(),
+            tracking='Pendiente',
+            estado_envio='en_preparacion',
+            transportista='A definir',
+            id_pedido=pedido.id_pedido,
+            id_revision=nueva_revision.id_revision
+        )
+        db.session.add(nuevo_envio)
+
+        db.session.commit()
+        flash(
+            f'Pedido #{pedido.id_pedido} aprobado. Revisión y envío inicial creados.', 'success')
+    else:
+        flash(
+            f'No hay contenedores disponibles para el pedido #{pedido.id_pedido}.', 'danger')
 
     return redirect(url_for('gerente'))
 
