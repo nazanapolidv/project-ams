@@ -7,8 +7,59 @@
 </head>
 <body class="bg-primary bg-opacity-10">
   <div class="container text-center mt-5">
-    <p>Pantalla para los clientes</p>
-    <a href="/" class="btn btn-outline-secondary mt-3">Cerrar sesión</a>
+    <h1>Hola, {{ cliente.nombre }}</h1>
+    <p class="lead">Bienvenido a la pantalla del cliente, podrás ver y registrar nuevos pedidos.</p>
+
+    <a href="{{ url_for('nuevo_pedido') }}" class="btn btn-primary mb-4">Nuevo Pedido</a>
+
+    {% if pedidos %}
+      <h3>Mis pedidos</h3>
+      <table class="table table-striped mt-3">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Fecha</th>
+            <th>Estado</th>
+            <th>Total</th>
+            <th>Volumen</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for pedido in pedidos %}
+            <tr>
+              <td>{{ pedido.id_pedido }}</td>
+              <td>{{ pedido.fecha.strftime('%Y-%m-%d') }}</td>
+              <td>
+                {% if pedido.estado == 'pendiente' %}
+                  <span class="badge bg-warning text-dark">Pendiente</span>
+                {% elif pedido.estado == 'aprobado' %}
+                  <span class="badge bg-success">Aprobado</span>
+                {% elif pedido.estado == 'cancelado' %}
+                  <span class="badge bg-danger">Cancelado</span>
+                {% else %}
+                  <span class="badge bg-secondary">{{ pedido.estado }}</span>
+                {% endif %}
+              </td>
+              <td>${{ '%.2f'|format(pedido.total or 0) }}</td>
+              <td>{{ '%.6f'|format(pedido.volumen_total_m3 or 0) }}</td>
+            </tr>
+            <tr>
+              <td colspan="5">
+                <strong>Productos:</strong>
+                <ul class="list-unstyled mb-4">
+                  {% for item in pedido.items %}
+                    <li>{{ item.cantidad }} x {{ item.producto.nombre }} (SKU: {{ item.producto.sku }})</li>
+                  {% endfor %}
+                </ul>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <div class="alert alert-info">Aún no realizaste pedidos.</div>
+    {% endif %}
+    <a href="{{ url_for('logout') }}" class="btn btn-outline-secondary mt-3">Cerrar sesión</a>
   </div>
 </body>
 </html>
