@@ -67,14 +67,12 @@ def cliente():
         flash('Debes iniciar sesión como cliente para ver esta página.', 'warning')
         return redirect(url_for('login'))
 
-    # Buscar el cliente asociado al usuario logueado
     cliente = Cliente.query.filter_by(email="ana.gomez@hotmail.com").first()
 
     if not cliente:
         flash("No se encontró el cliente asociado al usuario.", "danger")
         return redirect(url_for('logout'))
 
-    # Traer sus pedidos
     pedidos = Pedido.query.filter_by(id_cliente=cliente.id_cliente).order_by(Pedido.fecha.desc()).all()
 
     return render_template('cliente.html', usuario=g.user, cliente=cliente, pedidos=pedidos)
@@ -91,7 +89,6 @@ def nuevo_pedido():
     deposito = Deposito.query.first()
 
     if request.method == 'POST':
-        # Crear nuevo pedido
         nuevo_pedido = Pedido(
             fecha=date.today(),
             estado='pendiente',
@@ -102,9 +99,8 @@ def nuevo_pedido():
             volumen_total_m3=Decimal('0.0')
         )
         db.session.add(nuevo_pedido)
-        db.session.flush()  # para obtener el id antes del commit
+        db.session.flush()  
 
-        # Agregar items seleccionados
         for producto in productos:
             cantidad = request.form.get(f'cantidad_{producto.sku}')
             if cantidad and int(cantidad) > 0:
@@ -151,7 +147,6 @@ def aprobar_pedido(pedido_id):
             f'El pedido #{pedido.id_pedido} ya no estaba pendiente.', 'warning')
         return redirect(url_for('gerente'))
 
-    # Buscar un contenedor con capacidad suficiente
     contenedor_disponible = Contenedor.query.filter(
         Contenedor.estado == 'disponible',
         Contenedor.capacidad - Contenedor.ocupacion_actual >= pedido.volumen_total_m3
@@ -162,7 +157,6 @@ def aprobar_pedido(pedido_id):
         pedido.id_contenedor = contenedor_disponible.id_contenedor
         contenedor_disponible.ocupacion_actual += pedido.volumen_total_m3
 
-        # Opcional: Si el contenedor se llena, cambiar su estado
         if contenedor_disponible.ocupacion_actual >= contenedor_disponible.capacidad:
             contenedor_disponible.estado = 'ocupado'
 
