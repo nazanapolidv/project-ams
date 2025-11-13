@@ -48,12 +48,12 @@
               <div>
                 {% if pedido.estado == 'pendiente' %}
 
-                <form action="{{ url_for('aprobar_pedido', pedido_id=pedido.id_pedido) }}" method="POST"
+                <form action="{{ url_for('gerente.aprobar_pedido', pedido_id=pedido.id_pedido) }}" method="POST"
                   style="display: inline;">
                   <button type="submit" class="btn btn-success btn-sm">Aprobar</button>
                 </form>
 
-                <form action="{{ url_for('rechazar_pedido', pedido_id=pedido.id_pedido) }}" method="POST"
+                <form action="{{ url_for('gerente.rechazar_pedido', pedido_id=pedido.id_pedido) }}" method="POST"
                   style="display: inline;">
                   <button type="submit" class="btn btn-danger btn-sm">Rechazar</button>
                 </form>
@@ -156,7 +156,7 @@
       </table>
     </div>
 
-    <a href="{{ url_for('logout') }}" class="btn btn-outline-secondary m-3">Cerrar sesión</a>
+    <a href="{{ url_for('auth.logout') }}" class="btn btn-outline-secondary m-3">Cerrar sesión</a>
   </div>
 </body>
 
